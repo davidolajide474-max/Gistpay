@@ -31,3 +31,4 @@ jobs:
 
       - name: Build APK
         run: eas build --platform android --non-interactive --no-wait
+        
