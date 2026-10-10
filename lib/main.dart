@@ -1,67 +1,122 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:url_launcher/url_launcher.dart';
 
-void main() => runApp(GistPayV3());
+void main() => runApp(const MyDayApp());
 
-class GistPayV3 extends StatefulWidget {
-  @override
-  _GistPayV3State createState() => _GistPayV3State();
-}
-
-class _GistPayV3State extends State<GistPayV3> {
-  double balance = 5000;
-  List<String> transactions = ["Added N1000", "Received N500", "Sent N200"];
-
-  String username = "David";
-  String paymentLink = "gistpay.me/David";
-
-  void addMoney() async {
-    setState(() {
-      balance += 1000;
-      transactions.insert(0, "Added N1000 - ${DateTime.now().hour}:${DateTime.now().minute}");
-    });
-    final prefs = await SharedPreferences.getInstance();
-    prefs.setDouble('balance', balance);
-    prefs.setStringList('transactions', transactions);
-  }
-
-  void shareLink() async {
-    final url = Uri.parse("https://wa.me/?text=Pay me via GISTPAY: https://$paymentLink 💚");
-    if (await canLaunchUrl(url)) await launchUrl(url, mode: LaunchMode.externalApplication);
-  }
-
+class MyDayApp extends StatelessWidget {
+  const MyDayApp({super.key});
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      home: Scaffold(
-        backgroundColor: Colors.white,
-        appBar: AppBar(title: Text("GISTPAY - $username"), backgroundColor: Color(0xFF2E9E4E)),
-        body: Padding(
-          padding: EdgeInsets.all(16),
-          child: Column(
-            children: [
-              Container(
-                padding: EdgeInsets.all(20),
-                decoration: BoxDecoration(color: Color(0xFF2E9E4E), borderRadius: BorderRadius.circular(16)),
-                child: Column(children: [
-                  Text("Wallet Balance", style: TextStyle(color: Colors.white70)),
-                  Text("₦${balance.toStringAsFixed(0)}", style: TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.bold)),
-                  SizedBox(height: 10),
-                  Text(paymentLink, style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                ]),
-              ),
-              SizedBox(height: 20),
-              ElevatedButton(onPressed: addMoney, child: Text("Add N1000"), style: ElevatedButton.styleFrom(backgroundColor: Color(0xFF2E9E4E), minimumSize: Size(double.infinity, 50))),
-              SizedBox(height: 10),
-              ElevatedButton.icon(onPressed: shareLink, icon: Icon(Icons.share), label: Text("Share $paymentLink on WhatsApp"), style: ElevatedButton.styleFrom(backgroundColor: Colors.green[700], minimumSize: Size(double.infinity, 50))),
-              SizedBox(height: 20),
-              Text("Recent Gists", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-              Expanded(child: ListView.builder(itemCount: transactions.length, itemBuilder: (c,i) => ListTile(title: Text(transactions[i]))))
-            ],
+      theme: ThemeData(useMaterial3: true, colorSchemeSeed: Colors.indigo),
+      home: const TodoHome(),
+    );
+  }
+}
+
+class Todo {
+  String title;
+  bool done;
+  Todo(this.title, this.done);
+}
+
+class TodoHome extends StatefulWidget {
+  const TodoHome({super.key});
+  @override
+  State<TodoHome> createState() => _TodoHomeState();
+}
+
+class _TodoHomeState extends State<TodoHome> {
+  final TextEditingController _controller = TextEditingController();
+  List<Todo> todos = [
+    Todo("Buy fuel for gen", false),
+    Todo("Finish my app", false),
+    Todo("Charge phone to 100%", true),
+  ];
+
+  void addTodo() {
+    if (_controller.text.trim().isEmpty) return;
+    setState(() {
+      todos.insert(0, Todo(_controller.text.trim(), false));
+      _controller.clear();
+    });
+  }
+
+  void toggle(int i) {
+    setState(() => todos[i].done =!todos[i].done);
+  }
+
+  void delete(int i) {
+    setState(() => todos.removeAt(i));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    int doneCount = todos.where((t) => t.done).length;
+    return Scaffold(
+      backgroundColor: const Color(0xFFF6F7FB),
+      appBar: AppBar(
+        backgroundColor: Colors.indigo,
+        title: Text("MY DAY - $doneCount/${todos.length} Done", style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        centerTitle: true,
+      ),
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _controller,
+                    decoration: InputDecoration(
+                      hintText: "What to do today?",
+                      filled: true,
+                      fillColor: Colors.white,
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide.none),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                    ),
+                    onSubmitted: (_) => addTodo(),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                SizedBox(
+                  height: 54,
+                  child: ElevatedButton(
+                    onPressed: addTodo,
+                    style: ElevatedButton.styleFrom(backgroundColor: Colors.indigo, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15))),
+                    child: const Text("ADD", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
+          Expanded(
+            child: todos.isEmpty
+               ? const Center(child: Text("No tasks yet. Add one! ✅", style: TextStyle(fontSize: 16, color: Colors.grey)))
+                : ListView.builder(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 100),
+                    itemCount: todos.length,
+                    itemBuilder: (context, i) {
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 10),
+                        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(15), boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 5)]),
+                        child: ListTile(
+                          leading: Checkbox(value: todos[i].done, onChanged: (_) => toggle(i), activeColor: Colors.indigo),
+                          title: Text(todos[i].title, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500, decoration: todos[i].done? TextDecoration.lineThrough : null, color: todos[i].done? Colors.grey : Colors.black)),
+                          trailing: IconButton(icon: const Icon(Icons.delete_outline, color: Colors.redAccent), onPressed: () => delete(i)),
+                          onTap: () => toggle(i),
+                        ),
+                      );
+                    },
+                  ),
+          ),
+        ],
+      ),
+      bottomNavigationBar: Container(
+        padding: const EdgeInsets.all(16),
+        color: Colors.white,
+        child: Text("${todos.length} tasks total • Tap to complete • Long press? No, just tap!", textAlign: TextAlign.center, style: TextStyle(color: Colors.grey[600], fontSize: 13)),
       ),
     );
   }
