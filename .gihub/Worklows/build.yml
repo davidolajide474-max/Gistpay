@@ -1,34 +1,30 @@
-name: Build GistPay APK
-
+name: Build Flutter APK
 on:
-  push:
-    branches:
-      - main
   workflow_dispatch:
+  push:
+    branches: [ main ]
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
+      
+      - uses: subosito/flutter-action@v2
         with:
-          node-version: 18
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm install
-
-      - name: Setup Expo
-        uses: expo/expo-github-action@v8
-        with:
-          eas-version: latest
-          token: ${{ secrets.EXPO_TOKEN }}
-
-      - name: Build APK
-        run: eas build --platform android --non-interactive --no-wait
+          flutter-version: '3.22.0'
+          
+      - name: Recreate Android folder
+        run: flutter create --platforms=android .
         
+      - name: Get packages
+        run: flutter pub get
+        
+      - name: Build APK
+        run: flutter build apk --release
+        
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: GistPay-APK-FIXED
+          path: build/app/outputs/flutter-apk/app-release.apk
